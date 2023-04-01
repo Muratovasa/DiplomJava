@@ -5,17 +5,16 @@ import com.example.diplom.security.JwtAuthenticationEntryPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
-import org.springframework.security.config.annotation.web.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -27,21 +26,26 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true, jsr250Enabled = true)
-public class WebConfig implements WebSecurityConfigurerAdapter {
-    private final UserDetailsService jwtUserDetailsService;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+public class WebConfig {
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     private final JWTFilter jwtRequestFilter;
 
-    public WebConfig(UserDetailsService jwtUserDetailsService, JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint, JWTFilter jwtRequestFilter) {
-        this.jwtUserDetailsService = jwtUserDetailsService;
-        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+    public WebConfig(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint, JWTFilter jwtRequestFilter) {
+        //this.jwtUserDetailsService = jwtUserDetailsService;
+        // private final UserDetailsService jwtUserDetailsService;
         this.jwtRequestFilter = jwtRequestFilter;
     }
 
     @Bean
-    @Override
     public UserDetailsService userDetailsService() {
-        return super.userDetailsService();
+        UserDetails userDetails = User.builder()
+                .passwordEncoder(passwordEncoder::encode)
+                .username("user")
+                .password("password")
+                .roles("USER")
+                .build();
+        return new InMemoryUserDetailsManager(userDetails);
     }
 
 
@@ -62,39 +66,37 @@ public class WebConfig implements WebSecurityConfigurerAdapter {
         return source;
     }
 
-    @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(jwtUserDetailsService).passwordEncoder(passwordEncoder());
-    }
-
-
-
     @Bean
-    @Override
-    public AuthenticationManager authenticationManagerBean() throws Exception {
-        return super.authenticationManagerBean();
-    }
-
-    @Override
-    protected void configure(HttpSecurity httpSecurity) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         httpSecurity.cors();
         httpSecurity.csrf().disable();
         httpSecurity.headers().frameOptions().disable();
 
         httpSecurity
-                .authorizeRequests().antMatchers("/login").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .logout()
-                .deleteCookies("JSESSIONID")
-                .clearAuthentication(true);
+                .authorizeHttpRequests((request) -> request
+                        .requestMatchers("/login").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .formLogin((form) -> form
+                        .loginPage("/login")
+                        .permitAll()
+                )
+                .logout((logout) -> logout.permitAll());
+        return httpSecurity.build();
 
-        httpSecurity
+        //httpSecurity
+        //        .exceptionHandling()
+        //        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+        //        .and()
+        //        .sessionManagement()
+        //        .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+
+        /*httpSecurity
                 .exceptionHandling()
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 .and()
                 .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);*/
     }
 }

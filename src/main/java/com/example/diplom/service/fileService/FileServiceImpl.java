@@ -45,10 +45,11 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public List<CloudFileDto> show(String login, int limit) {
-        Optional<List<CloudFileEntity>> fileList = filesRepository.findAllFilesByUser(userRepository.findByLogin(login));
-        return fileList.get().stream().map(f -> new CloudFileDto(f.getFileName(), f.getSize()))
-                .limit(limit)
-                .collect(Collectors.toList());
+        var fileList = filesRepository.findAllFilesByUser(userRepository.findByLogin(login));
+
+            return fileList.get().stream().map(f -> new CloudFileDto(f.getFileName(), f.getSize()))
+                    .limit(limit)
+                    .collect(Collectors.toList());
     }
 
     @Override

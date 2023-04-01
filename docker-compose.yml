@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+  database:
+    image: mysql_dip:latest
+    ports:
+      - "3306:3306"
+    environment:
+      POSTGRES_DB: mysql
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+  app:
+    container_name: appCloud
+    image: 'cloud_api'
+    build:
+      context: .
+    ports:
+      - "9090:9090"
+    depends_on:
+      - database
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://database:3306/mysql_dip
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root

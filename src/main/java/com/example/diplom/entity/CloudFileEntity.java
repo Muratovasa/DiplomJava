@@ -21,7 +21,6 @@ public class CloudFileEntity implements Serializable {
     @Column(name = "id")
     private Integer id;
 
-    @NotBlank
     @Column(name = "file_name", length = 100, nullable = false)
     private String fileName;
 
